@@ -1,0 +1,19 @@
+You are a senior backend engineer. Implement the production-minded REST API for CampusCart, a student campus marketplace.
+
+STACK: Node.js, Express, TypeScript, Prisma ORM, MySQL, Zod validation, Argon2id password hashing, JWT authentication in secure HTTP-only cookies, Helmet, CORS, and structured logging. Use npm and strict TypeScript.
+
+BASE URL: /api/v1. Default development server port 4000.
+
+API ROUTES: POST /auth/register, POST /auth/login, POST /auth/logout, GET /auth/me; GET /products, GET /products/:id, POST /products, PATCH /products/:id, DELETE /products/:id; GET /users/me/listings, GET /users/me/wishlist, POST /users/me/wishlist/:productId, DELETE /users/me/wishlist/:productId, GET /users/me/profile, PATCH /users/me/profile; GET /conversations, POST /conversations, GET /conversations/:id/messages, POST /conversations/:id/messages; POST /reports; GET /admin/reports, PATCH /admin/reports/:id, PATCH /admin/products/:id/status.
+
+DATA CONTRACT: Follow the shared Prisma schema. User roles are STUDENT and ADMIN. Product conditions are NEW, LIKE_NEW, GOOD, FAIR. Product statuses are AVAILABLE, RESERVED, SOLD, REMOVED. Use consistent camelCase JSON fields, ISO-8601 timestamps, and a documented pagination format. Product list filters: search, category, minPrice, maxPrice, condition, page, limit. Return a consistent envelope such as { data, meta? } for success and { error: { code, message, details? } } for failures. Do not expose password hashes, token secrets, internal stack traces or private user data.
+
+FUNCTIONAL REQUIREMENTS: Implement registration, login, logout, current-user lookup, product CRUD, listing ownership checks, image upload validation, search and pagination, wishlist, profile, conversations, messages, reports, and admin moderation. Use database transactions when multiple related records must change atomically. Prevent duplicate conversations for the same participant pair where appropriate. Validate every body, path parameter and query parameter.
+
+SECURITY REQUIREMENTS: Use Argon2id for password hashing; issue signed short-lived access tokens or an equivalent well-defined JWT session design. Store browser authentication tokens only in HTTP-only cookies, configure Secure in production, SameSite appropriately, cookie expiry, origin allowlisting and CSRF protection for state-changing cookie-authenticated requests. Implement rate limiting on authentication and abuse-prone endpoints. Enforce ownership and ADMIN authorization on the server. Never trust role IDs, seller IDs, prices or ownership claims from the client. Validate uploads by file type, size and actual content; generate safe filenames. Use parameterized database operations through Prisma. Do not log passwords, cookies or tokens.
+
+CONFIGURATION: Read DATABASE_URL, JWT_SECRET, CLIENT_ORIGIN, PORT, NODE_ENV and storage settings from environment variables. Fail startup clearly when required production configuration is missing. Include .env.example with placeholders only.
+
+ERROR HANDLING: Add centralized error middleware, 404 handling, validation errors, correct HTTP status codes, request logging and safe error messages. Configure CORS for the frontend origin with credentials enabled; never use wildcard origins with credentialed requests.
+
+QUALITY: Organize code into routes, controllers, services, middleware, validators, types and database access. Provide a health endpoint, API documentation, seed script, unit/integration tests, complete setup instructions and migration commands. Test unauthorized access, invalid input, duplicate records and ownership violations. Generate actual runnable source files. Do not leave TODOs, placeholder implementations, missing imports or fake responses. Run tests and TypeScript compilation, and fix failures before finishing.
