@@ -1,19 +1,48 @@
-You are a senior backend engineer. Implement the production-minded REST API for CampusCart, a student campus marketplace.
-
-STACK: Node.js, Express, TypeScript, Prisma ORM, MySQL, Zod validation, Argon2id password hashing, JWT authentication in secure HTTP-only cookies, Helmet, CORS, and structured logging. Use npm and strict TypeScript.
-
-BASE URL: /api/v1. Default development server port 4000.
-
-API ROUTES: POST /auth/register, POST /auth/login, POST /auth/logout, GET /auth/me; GET /products, GET /products/:id, POST /products, PATCH /products/:id, DELETE /products/:id; GET /users/me/listings, GET /users/me/wishlist, POST /users/me/wishlist/:productId, DELETE /users/me/wishlist/:productId, GET /users/me/profile, PATCH /users/me/profile; GET /conversations, POST /conversations, GET /conversations/:id/messages, POST /conversations/:id/messages; POST /reports; GET /admin/reports, PATCH /admin/reports/:id, PATCH /admin/products/:id/status.
-
-DATA CONTRACT: Follow the shared Prisma schema. User roles are STUDENT and ADMIN. Product conditions are NEW, LIKE_NEW, GOOD, FAIR. Product statuses are AVAILABLE, RESERVED, SOLD, REMOVED. Use consistent camelCase JSON fields, ISO-8601 timestamps, and a documented pagination format. Product list filters: search, category, minPrice, maxPrice, condition, page, limit. Return a consistent envelope such as { data, meta? } for success and { error: { code, message, details? } } for failures. Do not expose password hashes, token secrets, internal stack traces or private user data.
-
-FUNCTIONAL REQUIREMENTS: Implement registration, login, logout, current-user lookup, product CRUD, listing ownership checks, image upload validation, search and pagination, wishlist, profile, conversations, messages, reports, and admin moderation. Use database transactions when multiple related records must change atomically. Prevent duplicate conversations for the same participant pair where appropriate. Validate every body, path parameter and query parameter.
-
-SECURITY REQUIREMENTS: Use Argon2id for password hashing; issue signed short-lived access tokens or an equivalent well-defined JWT session design. Store browser authentication tokens only in HTTP-only cookies, configure Secure in production, SameSite appropriately, cookie expiry, origin allowlisting and CSRF protection for state-changing cookie-authenticated requests. Implement rate limiting on authentication and abuse-prone endpoints. Enforce ownership and ADMIN authorization on the server. Never trust role IDs, seller IDs, prices or ownership claims from the client. Validate uploads by file type, size and actual content; generate safe filenames. Use parameterized database operations through Prisma. Do not log passwords, cookies or tokens.
-
-CONFIGURATION: Read DATABASE_URL, JWT_SECRET, CLIENT_ORIGIN, PORT, NODE_ENV and storage settings from environment variables. Fail startup clearly when required production configuration is missing. Include .env.example with placeholders only.
-
-ERROR HANDLING: Add centralized error middleware, 404 handling, validation errors, correct HTTP status codes, request logging and safe error messages. Configure CORS for the frontend origin with credentials enabled; never use wildcard origins with credentialed requests.
-
-QUALITY: Organize code into routes, controllers, services, middleware, validators, types and database access. Provide a health endpoint, API documentation, seed script, unit/integration tests, complete setup instructions and migration commands. Test unauthorized access, invalid input, duplicate records and ownership violations. Generate actual runnable source files. Do not leave TODOs, placeholder implementations, missing imports or fake responses. Run tests and TypeScript compilation, and fix failures before finishing.
+Prompt 3 — Database
+MySQL + Prisma ORM
+Use this prompt to generate the relational schema, migrations, indexes, and development seed data.
+You are a senior database engineer. Design and implement the MySQL database for CampusCart, a student-to-student campus marketplace. Use Prisma ORM and TypeScript.
+DELIVERABLES: prisma/schema.prisma, migration files, seed script, database indexes, relational constraints, an ER diagram in Mermaid, and setup documentation. Use InnoDB, utf8mb4, explicit relations, suitable decimal precision for money, and UTC timestamps. Select a compatible stable Prisma version and ensure the schema validates.
+MODELS:
+1. User: id, name, unique normalized email, passwordHash, role (STUDENT or ADMIN), optional collegeName, optional avatarUrl, createdAt, updatedAt.
+2. Category: id, unique name, slug, createdAt.
+3. Product: id, sellerId referencing User, categoryId referencing Category, title, description, price using Decimal with suitable precision, condition (NEW, LIKE_NEW, GOOD, FAIR), status (AVAILABLE, RESERVED, SOLD, REMOVED), createdAt, updatedAt.
+4. ProductImage: id, productId, imageUrl or storage key, position, createdAt. Store references to images, not image binaries.
+5. WishlistItem: id, userId, productId, createdAt; unique constraint on userId + productId.
+6. Conversation: id, participantOneId, participantTwoId, productId, createdAt, updatedAt. Both participants reference User. Define a canonical participant order and a tested strategy to prevent duplicate conversations for the same participant pair and product.
+7. Message: id, conversationId, senderId, body, createdAt, optional readAt. Ensure application logic verifies that the sender is a participant.
+8. Report: id, reporterId, optional productId, optional reportedUserId, reason, optional description, status (OPEN, REVIEWING, RESOLVED, DISMISSED), createdAt, updatedAt, optional reviewedById. Require a valid report target at the application layer.
+RELATIONSHIPS: Users own products and messages. Products belong to a seller and category and have images. WishlistItem joins User and Product. Conversations have two participants, optional product context, and many messages. Reports reference reporter and optional targets, plus an optional reviewing admin. Ensure every Prisma relation compiles.
+INTEGRITY: Add primary keys, foreign keys, unique constraints, and indexes for product status/category/price/createdAt, sellerId, wishlist lookups, conversation participants, message pagination, and report moderation. Prevent duplicate wishlist items and duplicate conversations. Define onDelete behavior explicitly. Prefer restricting deletion of referenced users/products or soft removal when history must be preserved; do not accidentally cascade-delete reports or message history.
+SEARCH: Support case-insensitive title search and filters for category, minPrice, maxPrice, condition, and status. Document MySQL collation choices and implement filters with safe Prisma query construction. Do not claim full-text search unless configured.
+SEED DATA: Add repeatable development-only categories such as Textbooks, Electronics, Lab Equipment, and Stationery, plus fictional student accounts and sample listings. Never use real personal data or production passwords. Document test credentials and prevent seed execution against production.
+CONFIGURATION: Read DATABASE_URL from environment variables. Include a placeholder-only example URL, commands for generating Prisma Client, applying development migrations, seeding, and deploying migrations safely. Do not automatically drop or reset an existing database.
+QUALITY CHECKS: Validate relations and enum names against generated Prisma Client. Ensure monetary fields, nullable values, uniqueness, and indexes match API expectations. Add integration tests for foreign keys, duplicate wishlists, duplicate conversations, report relations, and pagination ordering. Run Prisma validation and migration checks. Output complete runnable files, not just SQL snippets or explanations.
+ 
+Prompt 4 — Integration audit
+Full-stack consistency and testing
+Run this only after the frontend, backend, and database files exist.
+Act as a senior full-stack engineer auditing the actual CampusCart frontend, backend, and database files. Do not assume a feature exists without inspecting its implementation.
+1. Compare all frontend API calls against actual backend routes.
+2. Compare request bodies, response types, enum values, nullable fields, and pagination formats.
+3. Compare Prisma models, migrations, and backend queries.
+4. Verify cookie authentication, CORS, CSRF protections, role authorization, and ownership checks.
+5. Test registration, login, logout, product creation, image uploads, search, filters, wishlist, messaging, reports, and admin moderation.
+6. Check broken imports, TypeScript errors, missing environment variables, invalid Prisma relations, and missing migrations.
+7. Fix confirmed defects in the actual files. Do not replace working implementations with mock data.
+8. Add or update integration tests for critical workflows and unauthorized access.
+9. Run the build, Prisma validation, and available test suites. Report actual results, including failures that remain.
+Do not claim the project is complete or production-ready unless the corresponding checks have actually passed. Preserve existing data and never reset a production database.
+ 
+Recommended build order
+1.	Agree on the shared data contract and field names.
+2.	Create and validate the Prisma schema; run development migrations.
+3.	Implement the backend and test its routes.
+4.	Build the frontend and connect it to the real API.
+5.	Run the integration audit and fix issues before deployment.
+Important notes
+•	Keep secrets in local environment files and never commit them to source control.
+•	Never store authentication tokens in localStorage when using the cookie-based design specified above.
+•	Frontend validation improves usability; backend validation and authorization enforce security.
+•	Use fictional seed data only, and never run destructive database reset commands against production.
+•	Generated code must be executed and tested. A prompt alone cannot guarantee a bug-free application.
